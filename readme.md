@@ -12,6 +12,6 @@ Render client for Neural MMO. [Documentation](https://neuralmmo.github.io "Neura
 For running this, clone the repo, then 
 
 ```bash
-cd docs/
+cd client/docs/
 python -m http.server 8000
 ```
