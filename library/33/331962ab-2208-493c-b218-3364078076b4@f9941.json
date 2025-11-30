@@ -1,0 +1,30 @@
+{
+  "__type__": "cc.SpriteFrame",
+  "content": {
+    "name": "SelfHightLight",
+    "atlas": "",
+    "rect": {
+      "x": 1,
+      "y": 157,
+      "width": 255,
+      "height": 867
+    },
+    "offset": {
+      "x": 0.5,
+      "y": -78.5
+    },
+    "originalSize": {
+      "width": 256,
+      "height": 1024
+    },
+    "rotated": false,
+    "capInsets": [
+      0,
+      0,
+      0,
+      0
+    ],
+    "texture": "331962ab-2208-493c-b218-3364078076b4@6c48a",
+    "packable": true
+  }
+}
