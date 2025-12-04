@@ -21,9 +21,8 @@ const { ccclass, property } = _decorator;
 @ccclass('World')
 export class World extends Component {
 
-    static readonly PLAYER_DEATH_FOG = 240; // # 缩毒开始时间
-    static readonly PLAYER_DEATH_FOG_FINAL_SIZE = 15; // # 最后的安全区的半径，安全区是个正方形
-    static readonly PLAYER_DEATH_FOG_SPEED = 1 / 16; // # 缩毒速度，每16步缩一格
+    // Death fog config is now read from GlobalConfig (populated from replay data)
+    // See GlobalConfig.initDeathFogConfig() which is called during parseReplayData
 
     // [1]
     // dummy = '';
@@ -120,7 +119,9 @@ export class World extends Component {
         this.packets = replay.packets;
         this.totalStep = this.packets.length;
         this.replayStep = 0;
-
+        
+        // Initialize death fog config from replay data
+        GlobalConfig.initDeathFogConfig();
     }
 
 

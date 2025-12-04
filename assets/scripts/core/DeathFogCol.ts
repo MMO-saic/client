@@ -17,13 +17,15 @@ const { ccclass, property } = _decorator;
  *
  */
 
-// 毒圈 
+// 毒圈 (Death Fog Circle)
 @ccclass('DeathFogCol')
 export class DeathFogCol extends Component {
 
-    static readonly PLAYER_DEATH_FOG = 240; // # 缩毒开始时间
-    static readonly PLAYER_DEATH_FOG_FINAL_SIZE = 15; // # 最后的安全区的半径，安全区是个正方形
-    static readonly PLAYER_DEATH_FOG_SPEED = 1 / 16; // # 缩毒速度，每16步缩一格
+    // Death fog config is now read from GlobalConfig (which reads from replay)
+    // These getters provide easy access to the config values
+    private get PLAYER_DEATH_FOG(): number | null { return GlobalConfig.PLAYER_DEATH_FOG; }
+    private get PLAYER_DEATH_FOG_FINAL_SIZE(): number { return GlobalConfig.PLAYER_DEATH_FOG_FINAL_SIZE; }
+    private get PLAYER_DEATH_FOG_SPEED(): number { return GlobalConfig.PLAYER_DEATH_FOG_SPEED; }
 
 
     @property(Graphics)
@@ -42,6 +44,9 @@ export class DeathFogCol extends Component {
 
     color: Color = new Color().fromHEX("#0d430580");
     maxStep: number;
+    
+    // Flag to track if fog bounds have been calculated with correct config
+    private _initialized: boolean = false;
 
 
 
@@ -51,12 +56,14 @@ export class DeathFogCol extends Component {
         this.right = new Vec2;
         this.bottom = new Vec2;
 
-        /*
-        let size = (GlobalConfig.MapSize - fogStep* 2 - GlobalConfig.BORDER_SIZE * 2)
-
- 
-        */
-
+        // Initial bounds calculation (will be recalculated when config is ready)
+        this._recalculateBounds();
+        
+        EventManager.view.on(BattleEvent.StepChange, this.onStepChange, this)
+    }
+    
+    // Recalculate fog bounds based on current GlobalConfig values
+    private _recalculateBounds(): void {
         let size = (GlobalConfig.MapSize - GlobalConfig.BORDER_SIZE * 2)
 
         let w = size * GlobalConfig.HRhombusSize.x * 2
@@ -67,9 +74,7 @@ export class DeathFogCol extends Component {
         this.right.set(w / 2 + GlobalConfig.HRhombusSize.x, 0);
         this.bottom.set(0, -h / 2 - GlobalConfig.HRhombusSize.y);
 
-        this.maxStep = (GlobalConfig.MapSize - GlobalConfig.BORDER_SIZE * 2 - DeathFogCol.PLAYER_DEATH_FOG_FINAL_SIZE * 2) / 2;
-        // GlobalConfig.MapSize - fogStep * 2 - GlobalConfig.BORDER_SIZE * 2
-        EventManager.view.on(BattleEvent.StepChange, this.onStepChange, this)
+        this.maxStep = (GlobalConfig.MapSize - GlobalConfig.BORDER_SIZE * 2 - this.PLAYER_DEATH_FOG_FINAL_SIZE * 2) / 2;
     }
 
     /*
@@ -108,14 +113,32 @@ export class DeathFogCol extends Component {
 
     public onStepChange(step: number): void {
         if (this.curReplayStep != step) {
+            
+            // On first step change, recalculate bounds with correct config
+            // (config is loaded by World.parseReplayData before first step)
+            if (!this._initialized) {
+                this._initialized = true;
+                this._recalculateBounds();
+                this.curFogStep = 0;  // Reset fog step
+            }
 
             this.curReplayStep = step;
-            if (this.curReplayStep < DeathFogCol.PLAYER_DEATH_FOG) {
+            
+            // If death fog is disabled (null), don't draw anything
+            if (this.PLAYER_DEATH_FOG === null) {
+                this.gl.clear();
+                return;
+            }
+            
+            if (this.curReplayStep < this.PLAYER_DEATH_FOG) {
                 this.gl.clear();
             }
             else {
 
-                let fogStep = Math.floor((this.curReplayStep - DeathFogCol.PLAYER_DEATH_FOG + 1) * DeathFogCol.PLAYER_DEATH_FOG_SPEED);
+                // Server damages when fog_map > 0.5, so we adjust visual to match
+                // fogStep represents tiles from edge that are in the damage zone
+                let rawFogProgress = (this.curReplayStep - this.PLAYER_DEATH_FOG) * this.PLAYER_DEATH_FOG_SPEED;
+                let fogStep = Math.max(0, Math.floor(rawFogProgress + 0.5));
                 // 最大步数限制
                 fogStep = Math.min(this.maxStep, fogStep);
 

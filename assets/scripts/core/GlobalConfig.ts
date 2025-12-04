@@ -12,8 +12,8 @@ export class GlobalConfig {
     // 菱形夹角的一半
     public static readonly RADIAN = math.toRadian(30);//math.toRadian(30);//math.toRadian(35);
 
-    // 岩浆宽度 16个格子
-    public static readonly BORDER_SIZE = 16;
+    // 岩浆宽度 - now read from replay, default 16
+    public static BORDER_SIZE = 16;
     public static readonly TILE_SIZE_25D = new Size(256, 285);// new Size(330, 262);// new Size(256, 284);
     public static readonly TILE_SIZE = new Size(128, 128);
 
@@ -73,4 +73,39 @@ export class GlobalConfig {
     public   static  Viewport:Rect = new Rect();
 
     public   static  CanvasNode :Node;
+
+    // Death fog config - read from replay if available, otherwise use these defaults
+    // Values match battle_royale.py settings
+    public static PLAYER_DEATH_FOG: number | null = 50;            // Fog onset tick (tick 50)
+    public static PLAYER_DEATH_FOG_FINAL_SIZE: number = 8;         // Final safe zone radius
+    public static PLAYER_DEATH_FOG_SPEED: number = 1;              // Shrink speed (1 tile per tick)
+
+    // Initialize death fog config from replay data
+    public static initDeathFogConfig(): void {
+        console.log("[DeathFog] initDeathFogConfig called");
+        if (GlobalConfig.replay && GlobalConfig.replay.packets && GlobalConfig.replay.packets.length > 0) {
+            const packet = GlobalConfig.replay.packets[0];
+            const config = packet.config;
+            
+            // Read border from packet (not config)
+            if (packet.border !== undefined) {
+                GlobalConfig.BORDER_SIZE = packet.border;
+                console.log("[DeathFog] Set BORDER_SIZE from replay:", GlobalConfig.BORDER_SIZE);
+            }
+            
+            console.log("[DeathFog] Found config in replay:", config);
+            if (config) {
+                // Read from replay config if available
+                GlobalConfig.PLAYER_DEATH_FOG = config.PLAYER_DEATH_FOG;
+                GlobalConfig.PLAYER_DEATH_FOG_FINAL_SIZE = config.PLAYER_DEATH_FOG_FINAL_SIZE ?? 8;
+                GlobalConfig.PLAYER_DEATH_FOG_SPEED = config.PLAYER_DEATH_FOG_SPEED ?? 1;
+                console.log("[DeathFog] Set values - onset:", GlobalConfig.PLAYER_DEATH_FOG, 
+                    "finalSize:", GlobalConfig.PLAYER_DEATH_FOG_FINAL_SIZE,
+                    "speed:", GlobalConfig.PLAYER_DEATH_FOG_SPEED);
+            }
+            // If no config in replay, keep the defaults (for older replay files)
+        } else {
+            console.log("[DeathFog] No replay or packets found, using defaults");
+        }
+    }
 }
